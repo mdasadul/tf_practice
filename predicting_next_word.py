@@ -1,6 +1,7 @@
 '''Example script to generate text from Nietzsche's writings.
 At least 20 epochs are required before the generated text
 starts sounding coherent.
+This script tries to predict next character. 
 It is recommended to run this script on GPU, as recurrent
 networks are quite computationally intensive.
 If you try this script on new data, make sure your corpus
@@ -33,14 +34,12 @@ next_chars = []
 
 
 for i in range(0, len(text)-1):
-    #sentences.append(text[i])
     sentences.append(text[i:1+i])
     next_chars.append(text[i+1:i+2])
-    #next_chars.append(text[i + maxlen])
     
 print('nb sequences:', len(sentences))
 
-#print('Vectorization...')
+print('Vectorization...')
 X = np.zeros((len(sentences), maxlen, len(chars)), dtype=np.bool)
 y = np.zeros((len(sentences), len(chars)), dtype=np.bool)
 for i, sentence in enumerate(sentences):
@@ -52,9 +51,9 @@ for i, sentence in enumerate(sentences):
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(LSTM(128, return_sequences=True, input_shape=(maxlen, len(chars))))
+model.add(LSTM(512, return_sequences=True, input_shape=(maxlen, len(chars))))
 model.add(Dropout(0.2))
-model.add(LSTM(128, return_sequences=False))
+model.add(LSTM(512, return_sequences=False))
 model.add(Dropout(0.2))
 model.add(Dense(len(chars)))
 model.add(Activation('softmax'))
@@ -73,7 +72,7 @@ for iteration in range(1, 60):
     print()
     print('-' * 50)
     print('Iteration', iteration)
-    model.fit(X, y, batch_size=128, nb_epoch=1)
+    model.fit(X, y, batch_size=512, nb_epoch=1)
 
     start_index = random.randint(0, len(text) - maxlen - 1)
 
