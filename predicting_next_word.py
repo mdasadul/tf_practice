@@ -51,7 +51,7 @@ for i, sentence in enumerate(sentences):
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(LSTM(512, return_sequences=True, input_shape=(maxlen, len(chars))))
+model.add(LSTM(512, return_sequences=True, input_shape=25))
 model.add(Dropout(0.2))
 model.add(LSTM(512, return_sequences=False))
 model.add(Dropout(0.2))
@@ -68,11 +68,18 @@ def sample(a, temperature=1.0):
     return np.argmax(np.random.multinomial(1, a, 1))
 
 # train the model, output generated text after each iteration
+p=0
+seq_length = 25
+
 for iteration in range(1, 60):
     print()
     print('-' * 50)
     print('Iteration', iteration)
-    model.fit(X, y, batch_size=512, nb_epoch=1)
+    if p+seq_length >len(data):
+        p=0
+    X =[char_indices[ch] for ch in text[p:p+seq_length]]
+    y = [char_indices[ch] for ch in text[p+1:p+seq_length+1]]
+    model.fit(X, y, nb_epoch=1)
 
     start_index = random.randint(0, len(text) - maxlen - 1)
 
