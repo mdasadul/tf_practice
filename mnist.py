@@ -15,6 +15,8 @@ def conv2d(x,W):
 def max_pool_2x2(x):
     return tf.nn.max_pool(x,ksize = [1,2,2,1],strides=[1,2,2,1],padding ='SAME')
 
+
+
 mnist = input_data.read_data_sets("MNIST_data/",one_hot=True)
 sess = tf.InteractiveSession()
 x = tf.placeholder(tf.float32,[None,784])

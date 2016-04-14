@@ -13,6 +13,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Dropout
 from keras.layers.recurrent import LSTM
 from keras.utils.data_utils import get_file
+from keras.utils.np_utils import to_categorical
 import numpy as np
 import random
 import sys
@@ -34,31 +35,24 @@ next_chars = []
 
 
 for i in range(0, len(text)-1):
-    sentences.append(text[i:1+i])
-    next_chars.append(text[i+1:i+2])
+    sentences.append(char_indices[text[i:1+i]])
+    next_chars.append(char_indices[text[i+1:i+2]])
     
 print('nb sequences:', len(sentences))
-
-print('Vectorization...')
-X = np.zeros((len(sentences), maxlen, len(chars)), dtype=np.bool)
-y = np.zeros((len(sentences), len(chars)), dtype=np.bool)
-for i, sentence in enumerate(sentences):
-    for t, char in enumerate(sentence):
-        X[i, t, char_indices[char]] = 1
-    y[i, char_indices[next_chars[i]]] = 1
-
 
 # build the model: 2 stacked LSTM
 print('Build model...')
 model = Sequential()
-model.add(LSTM(512, return_sequences=True, input_shape=25))
+model.add(Dense(128,input_dim=len(chars)))
+model.add(Activation('relu'))
 model.add(Dropout(0.2))
-model.add(LSTM(512, return_sequences=False))
-model.add(Dropout(0.2))
+#model.add(Dense(512))
+#model.add(Activation('relu'))
+#model.add(Dropout(0.2))
 model.add(Dense(len(chars)))
 model.add(Activation('softmax'))
 
-model.compile(loss='categorical_crossentropy', optimizer='rmsprop')
+model.compile(loss='sparse_categorical_crossentropy', optimizer='rmsprop')
 
 
 def sample(a, temperature=1.0):
@@ -71,42 +65,38 @@ def sample(a, temperature=1.0):
 p=0
 seq_length = 25
 
-for iteration in range(1, 60):
+for iteration in range(1, 600):
     print()
     print('-' * 50)
     print('Iteration', iteration)
-    if p+seq_length >len(data):
-        p=0
-    X =[char_indices[ch] for ch in text[p:p+seq_length]]
-    y = [char_indices[ch] for ch in text[p+1:p+seq_length+1]]
-    model.fit(X, y, nb_epoch=1)
+       
+    xs=to_categorical(sentences,len(chars))
+    
+    model.fit(xs, next_chars, nb_epoch=3,batch_size=seq_length)
 
-    start_index = random.randint(0, len(text) - maxlen - 1)
+    start_index = random.randint(0, len(text) - seq_length - 1)
 
-    for diversity in [0.2, 0.5, 1.0, 1.2]:
+    for diversity in [1.0]:
         print()
         print('----- diversity:', diversity)
 
         generated = ''
-        sentence = text[start_index: start_index + maxlen]
+        sentence = text[start_index: start_index + seq_length]
         generated += sentence
         print('----- Generating with seed: "' + sentence + '"')
         sys.stdout.write(generated)
 
         for i in range(400):
             x = []
-            for i in range(400):
-                x = np.zeros((1, maxlen, len(chars)))
-                for t, char in enumerate(sentence):
-                    x[0, t, char_indices[char]] = 1
-
+            for j in range(len(sentence)):
+                x +=[char_indices[ch] for ch in sentence[j]]
+            x=to_categorical(x,len(chars))    
             preds = model.predict(x, verbose=0)[0]
             next_index = sample(preds, diversity)
             next_char = indices_char[next_index]
 
             generated += next_char
             sentence = sentence[1:] + next_char
-
             sys.stdout.write(next_char)
             sys.stdout.flush()
         print()
